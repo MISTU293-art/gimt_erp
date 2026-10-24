@@ -359,7 +359,7 @@ $user_initial = strtoupper(substr(trim($user_name), 0, 1));
                 <div class="collapse" id="academicMenu">
                     <ul class="nav flex-column sub-menu">
                         <li class="nav-item">
-                            <a class="nav-link" href="departments.html">Departments &amp; Courses</a>
+                            <a class="nav-link" href="/public/departments.php">Departments &amp; Courses</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="semesters.html">Semesters &amp; Batches</a>

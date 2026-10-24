@@ -40,65 +40,20 @@
                     <li class="nav-item">
                         <a class="nav-link active" href="index.php">HOME</a>
                     </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            ABOUT
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#about">Overview</a></li>
-                            <li><a class="dropdown-item" href="#mission">Mission &amp; Vision</a></li>
-                        </ul>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            INFRASTRUCTURE
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#campus">Campus</a></li>
-                            <li><a class="dropdown-item" href="#library">Library</a></li>
-                        </ul>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            ACADEMICS
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#courses">Courses Offered</a></li>
-                        </ul>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            STUDENT'S CORNER
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#login">Portal Login</a></li>
-                        </ul>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            TRAINING &amp; PLACEMENT
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#placement">Overview</a></li>
-                        </ul>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            LOA &amp; EOA
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#loa">LOA Documents</a></li>
-                            <li><a class="dropdown-item" href="#eoa">EOA Documents</a></li>
-                        </ul>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#about">ABOUT</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#career">CAREER</a>
+                        <a class="nav-link" href="#programs">ACADEMICS</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#recruiters">TRAINING &amp; PLACEMENT</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="#contact">CONTACT</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="admin_login.php" target="_blank">ADMIN LOGIN</a>
+                        <a class="nav-link" href="admin_login.php">ADMIN LOGIN</a>
                     </li>
                 </ul>
             </div>

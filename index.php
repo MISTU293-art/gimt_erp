@@ -1,7 +1,5 @@
 <?php
 
-/**PHP SESSION */
-session_start();
 /*
  * Edit the data here. Everything below is rendered from these arrays.
  * Notices and announcements come from your recording; replace them as needed.
@@ -37,7 +35,7 @@ $recruiters = [
     ['name' => 'Shrachi','logo'=>'https://gimt-india.com/wp-content/uploads/2026/06/shrachi.png'],
     ['name' => 'Electrosteel','logo'=>'https://gimt-india.com/wp-content/uploads/2026/06/electrosteel.png'],
     ['name' => 'CEAT','logo'=>'https://gimt-india.com/wp-content/uploads/2026/06/ceat.png'],
-    ['name' => 'Exide','logo'=>'https://gimt-india.com/wp-content/uploads/2026/06/ceat.png'],
+    ['name' => 'Exide', 'logo' => ''],
     ['name' => 'Kirloskar','logo'=>'https://gimt-india.com/wp-content/uploads/2026/06/Kirloskar.png'],
     ['name' => 'Cummins','logo'=>'https://gimt-india.com/wp-content/uploads/2026/06/Cummins-India.png'],
     ['name' => 'Thermax','logo'=>'https://gimt-india.com/wp-content/uploads/2026/06/Thermax.png'],
@@ -62,7 +60,11 @@ $whatsapp = '917596056174';
 
 function fmt_date($d)
 {
-    return strtoupper(date('l, F j, Y', strtotime($d)));
+    $timestamp = strtotime((string) $d);
+
+    return $timestamp === false
+        ? htmlspecialchars((string) $d, ENT_QUOTES, 'UTF-8')
+        : strtoupper(date('l, F j, Y', $timestamp));
 }
 ?>
 <!DOCTYPE html>
@@ -610,12 +612,15 @@ function fmt_date($d)
                                 <?php foreach ($notices as $n): ?>
                                     <li>
                                         <div class="board-date"><i class="bi bi-calendar3" aria-hidden="true"></i><?php echo fmt_date($n['date']); ?></div>
-                                        <?php if (!empty($n['code'])): ?><div class="board-code"><?php echo htmlspecialchars($n['code']); ?></div><?php endif; ?>
-                                        <a class="board-link" href="<?php echo htmlspecialchars($n['link']); ?>"><?php echo htmlspecialchars($n['title']); ?></a>
+                                        <?php if (!empty($n['code'])): ?><div class="board-code"><?php echo htmlspecialchars($n['code'], ENT_QUOTES, 'UTF-8'); ?></div><?php endif; ?>
+                                        <?php if (!empty($n['link']) && $n['link'] !== '#'): ?>
+                                            <a class="board-link" href="<?php echo htmlspecialchars($n['link'], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($n['title'], ENT_QUOTES, 'UTF-8'); ?></a>
+                                        <?php else: ?>
+                                            <span class="board-link"><?php echo htmlspecialchars($n['title'], ENT_QUOTES, 'UTF-8'); ?></span>
+                                        <?php endif; ?>
                                     </li>
                                 <?php endforeach; ?>
                             </ul>
-                            <div class="board-more"><a href="/notices" class="btn btn-orange">View more</a></div>
                         </div>
                     </div>
                     <div class="col-lg-5 col-md-6">
@@ -625,12 +630,15 @@ function fmt_date($d)
                                 <?php foreach ($announcements as $n): ?>
                                     <li>
                                         <div class="board-date"><i class="bi bi-calendar3" aria-hidden="true"></i><?php echo fmt_date($n['date']); ?></div>
-                                        <?php if (!empty($n['code'])): ?><div class="board-code"><?php echo htmlspecialchars($n['code']); ?></div><?php endif; ?>
-                                        <a class="board-link" href="<?php echo htmlspecialchars($n['link']); ?>"><?php echo htmlspecialchars($n['title']); ?></a>
+                                        <?php if (!empty($n['code'])): ?><div class="board-code"><?php echo htmlspecialchars($n['code'], ENT_QUOTES, 'UTF-8'); ?></div><?php endif; ?>
+                                        <?php if (!empty($n['link']) && $n['link'] !== '#'): ?>
+                                            <a class="board-link" href="<?php echo htmlspecialchars($n['link'], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($n['title'], ENT_QUOTES, 'UTF-8'); ?></a>
+                                        <?php else: ?>
+                                            <span class="board-link"><?php echo htmlspecialchars($n['title'], ENT_QUOTES, 'UTF-8'); ?></span>
+                                        <?php endif; ?>
                                     </li>
                                 <?php endforeach; ?>
                             </ul>
-                            <div class="board-more"><a href="/announcements" class="btn btn-orange">View more</a></div>
                         </div>
                     </div>
                 </div>
@@ -740,7 +748,7 @@ function fmt_date($d)
     </main>
 
     <!-- Footer -->
-    <footer class="site-footer pt-5 pb-3">
+    <footer id="contact" class="site-footer pt-5 pb-3">
         <div class="container">
             <div class="row g-4">
                 <div class="col-lg-2 col-md-3">
@@ -772,9 +780,9 @@ function fmt_date($d)
     </footer>
 
     <!-- Floating controls -->
-    <a href="/enquiry" class="enquiry-tab text-decoration-none">ENQUIRY</a>
+    <a href="#contact" class="enquiry-tab text-decoration-none">ENQUIRY</a>
     <div class="float-actions">
-        <a href="#" class="fa-arrow" aria-label="Quick links"><i class="bi bi-arrow-right"></i></a>
+        <a href="#programs" class="fa-arrow" aria-label="View programs"><i class="bi bi-arrow-right"></i></a>
         <a href="https://wa.me/<?php echo $whatsapp; ?>" class="fa-wa" aria-label="Chat on WhatsApp"><i class="bi bi-whatsapp"></i></a>
         <a href="tel:+917596056174" class="fa-ph" aria-label="Call admissions"><i class="bi bi-telephone-fill"></i></a>
     </div>

@@ -1,0 +1,15 @@
+{
+    "name": "mistu/public",
+    "autoload": {
+        "psr-4": {
+            "Mistu\\Public\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Mistu293-art",
+            "email": "mistu14112006@gmail.com"
+        }
+    ],
+    "require": {}
+}
