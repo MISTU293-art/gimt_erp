@@ -145,7 +145,7 @@ $lastRecord  = min($offset + $perPage, $totalStaff);
 */
 
 $stmt = $conn->prepare(
-    "SELECT id, name, email, role, mobile
+    "SELECT id,staff_id, name, email, role, mobile
      FROM users" . $where . "
      ORDER BY id DESC
      LIMIT ? OFFSET ?"
@@ -620,6 +620,7 @@ function e($value): string
                             <thead>
                                 <tr>
                                     <th>ID</th>
+                                    <th>Staff Id</th>
                                     <th>Name</th>
                                     <th>Email Address</th>
                                     <th>Role</th>
@@ -637,7 +638,9 @@ function e($value): string
                                             <td class="staff-id">
                                                 #<?= (int) $row['id'] ?>
                                             </td>
-
+                                            <td class="staff-id">
+                                           <?php echo e($row['staff_id'] ?? 'N\A'); ?>
+                                            </td>
                                             <td class="staff-name">
                                                 <?= e($row['name']) ?>
                                             </td>

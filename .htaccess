@@ -1,0 +1,53 @@
+# GIMT Enterprise ERP - Production Apache Server Configuration
+# Target Architecture: Apache 2.4+ / PHP 8.x (MAKAUT Regulation Standard)
+
+# 1. Disable Directory Index Browsing
+Options -Indexes -MultiViews
+
+# 2. Enable Rewrite Engine
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # Prevent direct access to sensitive config files & VCS directories
+    RewriteRule ^(\.git|\.env|\.github|composer\.(json|lock)|Dockerfile|docker-compose\.yml|deploy\.sh|.*\.sql|.*\.log) - [F,L,NC]
+</IfModule>
+
+# 3. Block Sensitive Files Direct HTTP Access
+<FilesMatch "^(\.env.*|\.git.*|composer\.(json|lock)|.*\.sql|.*\.log|deploy\.sh)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order deny,allow
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# 4. Enforce Production Security Headers
+<IfModule mod_headers.c>
+    # Prevent clickjacking
+    Header set X-Frame-Options "SAMEORIGIN"
+    # Prevent MIME sniffing
+    Header set X-Content-Type-Options "nosniff"
+    # Cross-site scripting filter
+    Header set X-XSS-Protection "1; mode=block"
+    # Referrer policy
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    # Permissions policy
+    Header set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+</IfModule>
+
+# 5. PHP Production Runtime Limits (where mod_php is active)
+<IfModule mod_php.c>
+    php_value upload_max_filesize 20M
+    php_value post_max_size 25M
+    php_value max_execution_time 120
+    php_value max_input_time 120
+    php_value memory_limit 256M
+    php_flag display_errors Off
+    php_flag log_errors On
+</IfModule>
+
+# 6. Custom Error Pages
+ErrorDocument 403 /partials/403.php

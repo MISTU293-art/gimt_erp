@@ -1,33 +1,73 @@
 <?php
+// config/db.config.php - Enterprise Database Connection & Environment Loader
 
-$host = "localhost";
-$user = "root";
-$password = "";
-$db_Name = "gimt_erp";
+// Simple zero-dependency .env loader
+if (!function_exists('load_env_file')) {
+    function load_env_file(string $path): void {
+        if (!file_exists($path) || !is_readable($path)) {
+            return;
+        }
+        $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if ($line === '' || str_starts_with($line, '#')) {
+                continue;
+            }
+            if (strpos($line, '=') !== false) {
+                list($key, $val) = explode('=', $line, 2);
+                $key = trim($key);
+                $val = trim($val);
+                // Strip outer quotes if present
+                if ((str_starts_with($val, '"') && str_ends_with($val, '"')) ||
+                    (str_starts_with($val, "'") && str_ends_with($val, "'"))) {
+                    $val = substr($val, 1, -1);
+                }
+                if (!isset($_ENV[$key])) {
+                    $_ENV[$key] = $val;
+                    putenv("{$key}={$val}");
+                }
+            }
+        }
+    }
+}
 
-$conn = new mysqli($host, $user, $password, $db_Name);
+// Load .env from project root if present
+load_env_file(__DIR__ . '/../.env');
 
+$host = getenv('DB_HOST') ?: "localhost";
+$port = getenv('DB_PORT') ?: "3306";
+$user = getenv('DB_USER') ?: "root";
+$password = getenv('DB_PASS') !== false ? getenv('DB_PASS') : "";
+$db_Name = getenv('DB_NAME') ?: "gimt_erp";
+
+// 1. MySQLi connection for backwards compatibility
+$conn = new mysqli($host, $user, $password, $db_Name, (int)$port);
 if ($conn->connect_error) {
-    echo "<!DOCTYPE html>
+    http_response_code(500);
+    include __DIR__ . '/../partials/500.php';
+    exit;
+}
+$conn->set_charset("utf8mb4");
 
-<head>
-    
-    
-    <title>500 - Internal Server Error</title>
-    <style>
-        body { font-family: system-ui, sans-serif; background: #fffaf5; color: #382418; display: grid; place-content: center; height: 100vh; margin: 0; text-align: center; }
-        h1 { font-size: 4rem; color: #c2410c; margin: 0; }
-        p { color: #735f50; margin: 0.5rem 0 1.5rem; }
-        a { color: #fff; background: #c2410c; padding: 0.5rem 1rem; border-radius: 6px; text-decoration: none; font-weight: bold; }
-        a:hover { background: #9a3412; }
-    </style>
-</head>
-<body>
-    <div>
-        <h1>500</h1>
-        <p>Internal Server Error. Please try again later.</p>
-        <a href=" / ">Go Home</a>
-    </div>
-</body>
-</html>";
-} 
+// 2. PDO Connection for Production-Grade Prepared Statements & Transactions
+$pdo = null;
+try {
+    $dsn = "mysql:host={$host};port={$port};dbname={$db_Name};charset=utf8mb4";
+    $pdo = new PDO($dsn, $user, $password, [
+        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES   => false,
+    ]);
+} catch (PDOException $e) {
+    error_log("Database connection failed: " . $e->getMessage());
+    http_response_code(500);
+    include __DIR__ . '/../partials/500.php';
+    exit;
+}
+
+if (!function_exists('getDb')) {
+    function getDb(): PDO {
+        global $pdo;
+        return $pdo;
+    }
+}

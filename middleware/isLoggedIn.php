@@ -11,18 +11,26 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-// Check the user's current status in the database on every request
-$stmt = $conn->prepare("SELECT is_blocked FROM users WHERE id = ? LIMIT 1");
-$uid  = (string) $_SESSION['user_id'];
-$stmt->bind_param('s', $uid);
-$stmt->execute();
-$u = $stmt->get_result()->fetch_assoc();
+// Check the user's current status in the database on every request.
+$stmt = $conn->prepare("SELECT status FROM users WHERE id = ? LIMIT 1");
+if (!$stmt) {
+    http_response_code(500);
+    exit('Unable to verify the account status.');
+}
+$uid = (int) $_SESSION['user_id'];
+$stmt->bind_param('i', $uid);
+if (!$stmt->execute()) {
+    $stmt->close();
+    http_response_code(500);
+    exit('Unable to verify the account status.');
+}
+$user = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
 // Deleted or blocked user: log out immediately
-if (!$u || (int) $u['is_blocked'] === 1) {
+if (!$user || $user['status'] !== 'active') {
     $_SESSION = [];
     session_destroy();
-    header("Location: index.php?blocked=1");
+    header("Location: /public/index.php?blocked=1");
     exit;
 }

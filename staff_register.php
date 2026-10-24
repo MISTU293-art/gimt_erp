@@ -1,10 +1,11 @@
-
 <?php
 
 session_start();
 
 require_once __DIR__ . '/config/db.config.php';
 include('./middleware/isLoggedIn.php');
+require_once __DIR__ . '/middleware/roleAccess.php';
+require_user_role(['chairman', 'principal', 'hr']);
 $error = "";
 $success = "";
 
@@ -31,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $branch_name   = trim($_POST['branch_name'] ?? '');
     $pan_id        = strtoupper(trim($_POST['pan_id'] ?? ''));
     $aadhaar       = trim($_POST['aadhaar'] ?? '');
-
+    $staff_id = "";
     // Validate required fields
     if (
         $name === '' ||
@@ -40,32 +41,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $password === ''
     ) {
         $error = "Please fill in all required fields.";
-
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = "Please enter a valid email address.";
-
     } elseif (strlen($password) < 12) {
         $error = "Password must contain at least 12 characters.";
-
     } elseif (!in_array(
         $role,
         ['chairman', 'principal', 'accounts', 'hr', 'hod', 'teacher'],
         true
     )) {
         $error = "Invalid staff role selected.";
-
     } else {
 
         // Check whether the email already exists
         $check = $conn->prepare(
-            "SELECT id FROM users WHERE email = ? LIMIT 1"
+            "SELECT id FROM users WHERE email = ?  AND staff_id= ? LIMIT 1"
         );
 
         if (!$check) {
             $error = "Unable to process the registration.";
-
         } else {
-            $check->bind_param("s", $email);
+            $check->bind_param("ss", $email,$staff_id);
             $check->execute();
 
             $existingUser = $check->get_result()->fetch_assoc();
@@ -73,7 +69,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($existingUser) {
                 $error = "A staff account with this email already exists.";
-
             } else {
 
                 // Hash the password before storing it
@@ -81,21 +76,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $password,
                     PASSWORD_DEFAULT
                 );
+                $year = date("Y");
+                $staff_number = str_pad(random_int(0, 99999), 5, "0", STR_PAD_LEFT);
+
+                $staff_id = "GIMT" . $year . $staff_number;
 
                 $stmt = $conn->prepare(
                     "INSERT INTO users (
                         name, email, mobile, password, address, role,
                         qualification, bank_account, ifsc_code, bank_name,
-                        micr_code, branch_name, pan_id, aadhaar
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                        micr_code, branch_name, pan_id, aadhaar,staff_id
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)"
                 );
 
                 if (!$stmt) {
                     $error = "Unable to process the registration.";
-
                 } else {
                     $stmt->bind_param(
-                        "ssssssssssssss",
+                        "sssssssssssssss",
                         $name,
                         $email,
                         $mobile,
@@ -109,7 +107,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $micr_code,
                         $branch_name,
                         $pan_id,
-                        $aadhaar
+                        $aadhaar,
+                        $staff_id
                     );
 
                     if ($stmt->execute()) {
@@ -122,11 +121,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         // Redirect to refresh the page
                         header("Location: /public/staffs.php ");
                         exit();
-
                     } elseif ($stmt->errno === 1062) {
                         $error =
                             "A staff account with this email already exists.";
-
                     } else {
                         $error = "Registration failed. Please try again.";
                     }
@@ -271,33 +268,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </p>
                 </div>
                 <!-- alert -->
-                 
-<?php if ($error !== '' || $success !== ''): ?>
-    <div class="mb-3">
-        <?php if ($error !== ''): ?>
-            <div class="alert alert-danger alert-dismissible fade show"
-                 role="alert">
-                <?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?>
 
-                <button type="button"
-                        class="btn-close"
-                        data-bs-dismiss="alert"
-                        aria-label="Close"></button>
-            </div>
+                <?php if ($error !== '' || $success !== ''): ?>
+                    <div class="mb-3">
+                        <?php if ($error !== ''): ?>
+                            <div class="alert alert-danger alert-dismissible fade show"
+                                role="alert">
+                                <?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?>
 
-        <?php elseif ($success !== ''): ?>
-            <div class="alert alert-success alert-dismissible fade show"
-                 role="alert">
-                <?= htmlspecialchars($success, ENT_QUOTES, 'UTF-8') ?>
+                                <button type="button"
+                                    class="btn-close"
+                                    data-bs-dismiss="alert"
+                                    aria-label="Close"></button>
+                            </div>
 
-                <button type="button"
-                        class="btn-close"
-                        data-bs-dismiss="alert"
-                        aria-label="Close"></button>
-            </div>
-        <?php endif; ?>
-    </div>
-<?php endif; ?>
+                        <?php elseif ($success !== ''): ?>
+                            <div class="alert alert-success alert-dismissible fade show"
+                                role="alert">
+                                <?= htmlspecialchars($success, ENT_QUOTES, 'UTF-8') ?>
+
+                                <button type="button"
+                                    class="btn-close"
+                                    data-bs-dismiss="alert"
+                                    aria-label="Close"></button>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
 
                 <div class="registration-card">
 

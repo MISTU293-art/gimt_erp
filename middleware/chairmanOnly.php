@@ -4,7 +4,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 }
 
 
-if ($_SESSION['user_role'] != "chairman") {
-    header("Location:index.php");
+if (($_SESSION['user_role'] ?? '') !== 'chairman') {
+    header('Location: /public/index.php');
     exit;
 }

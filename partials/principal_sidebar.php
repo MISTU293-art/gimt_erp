@@ -7,72 +7,61 @@ $user_name    = $_SESSION['user_name']  ?? '';
 $user_email   = $_SESSION['user_email'] ?? '';
 $user_initial = strtoupper(substr(trim($user_name), 0, 1));
 
-$base        = '/public/';
-$currentPage = basename(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH));
+$base        = '';
+$currentPage = basename(parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH));
 
-/*
- * PRINCIPAL MENU
- * Add or remove items here. Anything not listed is not shown.
- * Left out on purpose: staff registration, roles & permissions,
- * college admins, fee structures, scholarships, marks entry,
- * audit logs and ERP settings.
- */
 $menu = [
-    ['type' => 'link', 'label' => 'Dashboard', 'icon' => 'bi-grid-1x2-fill', 'href' => 'principal_dashboard.php'],
+    ['type' => 'link', 'label' => 'Principal Dashboard', 'icon' => 'bi-speedometer2', 'href' => 'principal_dashboard.php'],
+
+    // ---------------- ADMISSIONS & ENROLLMENT ----------------
+    ['type' => 'section', 'label' => 'ADMISSIONS & ONBOARDING'],
+    ['type' => 'link', 'label' => 'Admissions Pipeline', 'icon' => 'bi-person-check-fill', 'href' => 'admissions_manage.php'],
 
     // ---------------- ACADEMIC MANAGEMENT ----------------
     ['type' => 'section', 'label' => 'ACADEMIC MANAGEMENT'],
-
-    ['type' => 'group', 'id' => 'departmentMenu', 'label' => 'Departments', 'icon' => 'bi-building', 'items' => [
-        ['label' => 'Create Department',      'href' => 'department_create.php'],
-        ['label' => 'Departments & Courses',  'href' => 'departments.html'],
+    ['type' => 'group', 'id' => 'departmentMenu', 'label' => 'Curriculum & Setup', 'icon' => 'bi-building', 'items' => [
+        ['label' => 'Departments & HODs',  'href' => 'departments.php'],
+        ['label' => 'Courses & Credits Master', 'href' => 'courses_master.php'],
+        ['label' => 'Faculty Workload Mapping', 'href' => 'faculty_workload.php'],
+        ['label' => 'Semesters & Batches',  'href' => 'semesters.php'],
+        ['label' => 'Syllabus Master',      'href' => 'syllabus.php'],
     ]],
 
-    ['type' => 'group', 'id' => 'academicMenu', 'label' => 'Academic Setup', 'icon' => 'bi-mortarboard', 'items' => [
-        ['label' => 'Semesters & Batches',  'href' => 'semesters.html'],
-        ['label' => 'Subjects & Syllabus',  'href' => 'subjects.html'],
+    ['type' => 'group', 'id' => 'usersMenu', 'label' => 'Staff & People', 'icon' => 'bi-people', 'items' => [
+        ['label' => 'Faculty & Staff Directory', 'href' => 'staffs.php'],
+        ['label' => 'HOD Department Assign',    'href' => 'hod_assign.php'],
     ]],
 
-    ['type' => 'group', 'id' => 'usersMenu', 'label' => 'People', 'icon' => 'bi-people', 'items' => [
-        ['label' => 'Students',          'href' => 'students.html'],
-        ['label' => 'Faculty & Staffs',  'href' => 'staffs.php'],
+    // ---------------- EXAMINATIONS & EVALUATION ----------------
+    ['type' => 'section', 'label' => 'EXAMINATIONS & EVALUATION'],
+    ['type' => 'group', 'id' => 'examMenu', 'label' => 'Internal Exams & CIA', 'icon' => 'bi-journal-check', 'items' => [
+        ['label' => 'Assessment Series Setup', 'href' => 'exam_series.php'],
+        ['label' => 'Tabular Marks Entry',     'href' => 'marks_entry.php'],
+        ['label' => 'Consolidated Tabulation', 'href' => 'exam_tabulation.php'],
+        ['label' => 'Digital Grade Cards',     'href' => 'grade_card.php'],
+        ['label' => 'Hall Tickets & Override', 'href' => 'hall_tickets.php'],
     ]],
 
-    ['type' => 'link', 'label' => 'Admissions', 'icon' => 'bi-person-plus', 'href' => 'admissions.html'],
+    // ---------------- ATTENDANCE & COURSEWORK ----------------
+    ['type' => 'section', 'label' => 'ATTENDANCE & COURSEWORK'],
+    ['type' => 'link', 'label' => 'Classroom Attendance',    'icon' => 'bi-calendar-check', 'href' => 'attendance_mark.php'],
+    ['type' => 'link', 'label' => 'Attendance Analytics (<75%)', 'icon' => 'bi-graph-up', 'href' => 'attendance_analytics.php'],
+    ['type' => 'link', 'label' => 'Leave & Condonations',   'icon' => 'bi-clipboard-check', 'href' => 'leave_requests.php'],
+    ['type' => 'link', 'label' => 'Coursework Assignments', 'icon' => 'bi-journal-text',   'href' => 'assignments_manage.php'],
 
-    ['type' => 'group', 'id' => 'examMenu', 'label' => 'Examinations', 'icon' => 'bi-journal-check', 'items' => [
-        ['label' => 'Exam Schedules',  'href' => 'exam-schedules.html'],
-        ['label' => 'Publish Results', 'href' => 'results.html'],
+    // ---------------- MAKAUT COMPLIANCE ----------------
+    ['type' => 'section', 'label' => 'MAKAUT COMPLIANCE'],
+    ['type' => 'link', 'label' => 'MAR (100 Points) Portal', 'icon' => 'bi-award-fill', 'href' => 'makaut_mar.php'],
+    ['type' => 'link', 'label' => 'MOOCs / SWAYAM / NPTEL', 'icon' => 'bi-mortarboard-fill', 'href' => 'makaut_moocs.php'],
+
+    // ---------------- FINANCE & LEDGERS ----------------
+    ['type' => 'section', 'label' => 'FINANCIAL OVERSIGHT'],
+    ['type' => 'group', 'id' => 'financeMenu', 'label' => 'Fee & Ledgers', 'icon' => 'bi-wallet2', 'items' => [
+        ['label' => 'Fee Structure Builder', 'href' => 'fee_structures.php'],
+        ['label' => 'Fee Collections Desk',  'href' => 'fee_collect.php'],
+        ['label' => 'Student Ledgers',        'href' => 'student_ledger.php'],
+        ['label' => 'Overdue Defaulters',    'href' => 'fee_defaulters.php'],
     ]],
-
-    // ---------------- CERTIFICATES & RECORDS ----------------
-    ['type' => 'section', 'label' => 'CERTIFICATES & RECORDS'],
-
-    ['type' => 'group', 'id' => 'certificateMenu', 'label' => 'Certificates', 'icon' => 'bi-patch-check', 'items' => [
-        ['label' => 'Transfer Certificate (TC)', 'href' => 'tc_requests.php'],
-        ['label' => 'Bonafide Certificate',      'href' => 'bonafide_requests.php'],
-        ['label' => 'Character Certificate',     'href' => 'character_certificates.php'],
-        ['label' => 'Issued Certificates',       'href' => 'issued_certificates.php'],
-    ]],
-
-    // ---------------- COMMUNICATION ----------------
-    ['type' => 'section', 'label' => 'COMMUNICATION'],
-
-    ['type' => 'group', 'id' => 'noticeMenu', 'label' => 'Notices', 'icon' => 'bi-megaphone', 'items' => [
-        ['label' => 'Create Notice', 'href' => 'notice_create.php'],
-        ['label' => 'All Notices',   'href' => 'notices.html'],
-    ]],
-
-    ['type' => 'link', 'label' => 'Events & Calendar', 'icon' => 'bi-calendar-event', 'href' => 'events.php'],
-
-    // ---------------- OPERATIONS ----------------
-    ['type' => 'section', 'label' => 'OPERATIONS'],
-
-    ['type' => 'link', 'label' => 'Fee Collections',     'icon' => 'bi-wallet2',        'href' => 'fee-collections.html'],
-    ['type' => 'link', 'label' => 'Attendance Tracking', 'icon' => 'bi-calendar-check', 'href' => 'attendance.html'],
-    ['type' => 'link', 'label' => 'Class Timetable',     'icon' => 'bi-clock-history',  'href' => 'routine.html'],
-    ['type' => 'link', 'label' => 'Leave Approvals',     'icon' => 'bi-clipboard-check','href' => 'leave_requests.php'],
-    ['type' => 'link', 'label' => 'Reports',             'icon' => 'bi-bar-chart-line', 'href' => 'reports.php'],
 ];
 
 function sb_e($v): string
@@ -86,38 +75,17 @@ function sb_active(string $href, string $current): bool
 }
 ?>
 
-<!-- sidebar css (variables are scoped to the sidebar so they don't change page colors) -->
+<!-- sidebar css -->
 <style>
     .gimt-sidebar {
-        --gimt-primary: #1f7df8;
-        --gimt-primary-dark: #193458;
+        --gimt-primary: #123b70;
+        --gimt-primary-dark: #0a1f3d;
         --gimt-blue: #2563eb;
         --gimt-blue-light: #eff6ff;
         --sidebar-bg: #ffffff;
         --sidebar-text: #475569;
         --sidebar-muted: #94a3b8;
         --sidebar-border: #e2e8f0;
-    }
-
-    /* no ancestor of the sidebar may use overflow hidden, or sticky breaks */
-    html,
-    body {
-        overflow-x: clip;
-    }
-
-    .page-layout,
-    .dashboard-layout {
-        display: flex;
-        align-items: flex-start;
-        min-height: 100vh;
-    }
-
-    .dashboard-main {
-        flex: 1 1 auto;
-        min-width: 0;
-    }
-
-    .gimt-sidebar {
         width: 270px;
         min-width: 270px;
         height: 100vh;
@@ -132,354 +100,99 @@ function sb_active(string $href, string $current): bool
         z-index: 1045;
     }
 
-    .sidebar-header {
-        flex: 0 0 auto;
-        min-height: 78px;
-        background: #fff;
-        border-bottom: 1px solid var(--sidebar-border);
-    }
-
-    .brand-logo {
-        width: 42px;
-        height: 42px;
-        padding: 3px;
-        object-fit: contain;
-        border: 1px solid var(--sidebar-border);
-        border-radius: 9px;
-    }
-
-    .brand-title {
-        color: var(--gimt-primary-dark);
-        font-size: 1.05rem;
-        font-weight: 800;
-    }
-
-    .brand-subtitle {
-        display: block;
-        margin-top: 4px;
-        color: var(--gimt-blue);
-        font-size: .59rem;
-        font-weight: 800;
-        letter-spacing: .65px;
-    }
-
-    .sidebar-body {
-        flex: 1 1 auto;
-        min-height: 0;
-        overflow-y: auto;
-        overflow-x: hidden;
-        padding: 18px 12px;
-        scrollbar-width: thin;
-        scrollbar-color: #cbd5e1 #fff;
-        overscroll-behavior: contain;
-    }
-
-    .sidebar-body::-webkit-scrollbar {
-        width: 6px;
-    }
-
-    .sidebar-body::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
-        border-radius: 10px;
-    }
-
-    .menu-label {
-        margin: 14px 10px 9px;
-        color: var(--sidebar-muted);
-        font-size: .67rem;
-        font-weight: 800;
-        letter-spacing: 1px;
-    }
-
-    .gimt-sidebar .nav {
-        gap: 3px;
-    }
-
-    .gimt-sidebar .nav-link {
-        min-height: 43px;
-        display: flex;
-        align-items: center;
-        gap: 11px;
-        padding: 10px 12px;
-        border-radius: 7px;
-        color: var(--sidebar-text);
-        font-size: .86rem;
-        font-weight: 600;
-        text-decoration: none;
-        transition: background .2s, color .2s;
-    }
-
-    .gimt-sidebar .nav-link>i:first-child {
-        width: 19px;
-        flex-shrink: 0;
-        color: #64748b;
-        font-size: 1.05rem;
-        text-align: center;
-    }
-
-    .gimt-sidebar .nav-link:hover {
-        color: var(--gimt-primary);
-        background: var(--gimt-blue-light);
-    }
-
-    .gimt-sidebar .nav-link:hover>i:first-child {
-        color: var(--gimt-blue);
-    }
-
-    .gimt-sidebar .nav-link.active {
-        color: #fff;
-        background: var(--gimt-primary);
-    }
-
-    .gimt-sidebar .nav-link.active>i:first-child {
-        color: #fff;
-    }
-
-    .menu-arrow {
-        margin-left: auto;
-        font-size: .75rem !important;
-        transition: transform .2s;
-    }
-
-    .gimt-sidebar .nav-link[aria-expanded="true"] .menu-arrow {
-        transform: rotate(180deg);
-    }
-
-    .sub-menu {
-        margin: 4px 0 8px 13px;
-        padding-left: 10px;
-        border-left: 1px solid var(--sidebar-border);
-    }
-
-    .gimt-sidebar .sub-menu .nav-link {
-        min-height: 37px;
-        padding: 8px 10px;
-        color: #64748b;
-        font-size: .81rem;
-        font-weight: 500;
-    }
-
-    .gimt-sidebar .sub-menu .nav-link.active,
-    .gimt-sidebar .sub-menu .nav-link:hover {
-        color: var(--gimt-blue);
-        background: var(--gimt-blue-light);
-    }
-
-    .sidebar-footer {
-        flex: 0 0 auto;
-        padding: 14px;
-        background: #fff;
-        border-top: 1px solid var(--sidebar-border);
-    }
-
-    .admin-avatar {
-        width: 40px;
-        height: 40px;
-        flex-shrink: 0;
-        display: grid;
-        place-items: center;
-        border-radius: 50%;
-        color: #fff;
-        background: var(--gimt-primary);
-        font-size: .85rem;
-        font-weight: 800;
-    }
-
-    .admin-name {
-        color: #172b4d;
-        font-size: .82rem;
-        font-weight: 700;
-    }
-
-    .admin-email {
-        color: #64748b;
-        font-size: .70rem;
-    }
-
-    .logout-btn {
-        width: 36px;
-        height: 36px;
-        flex-shrink: 0;
-        display: grid;
-        place-items: center;
-        color: #64748b;
-        border-radius: 8px;
-        text-decoration: none;
-    }
-
-    .logout-btn:hover {
-        color: #dc2626;
-        background: #fef2f2;
-    }
-
-    .sidebar-toggle {
-        position: fixed;
-        top: 14px;
-        left: 14px;
-        z-index: 1040;
-        width: 44px;
-        height: 44px;
-        display: grid;
-        place-items: center;
-        padding: 0;
-        color: #fff;
-        background: #1f7df8;
-        border: 0;
-        border-radius: 9px;
-    }
-
-    /* Desktop: sidebar stays fixed while the page scrolls */
-    @media (min-width: 992px) {
-        .gimt-sidebar {
-            position: sticky !important;
-            top: 0 !important;
-            align-self: flex-start;
-            height: 100vh !important;
-            height: 100dvh !important;
-            transform: none !important;
-            visibility: visible !important;
-        }
-
-        .sidebar-toggle {
-            display: none !important;
-        }
-    }
-
-    /* Mobile */
-    @media (max-width: 991.98px) {
-        .gimt-sidebar {
-            width: 280px;
-            min-width: 0;
-            max-width: 85vw;
-            height: 100vh;
-            height: 100dvh;
-        }
-
-        .dashboard-main {
-            width: 100%;
-            min-width: 0;
-            padding: 76px 16px 24px;
-        }
-    }
+    .sidebar-header { flex: 0 0 auto; min-height: 70px; background: #fff; border-bottom: 1px solid var(--sidebar-border); }
+    .brand-title { color: #172b4d; font-size: 1.05rem; font-weight: 800; line-height: 1.2; letter-spacing: .5px; }
+    .brand-subtitle { color: var(--sidebar-muted); font-size: .65rem; font-weight: 700; letter-spacing: 1px; }
+    .sidebar-body { flex: 1 1 auto; overflow-y: auto; padding: 14px 10px; }
+    .menu-label { padding: 8px 12px 4px; color: var(--sidebar-muted); font-size: .68rem; font-weight: 700; letter-spacing: 1.1px; }
+    .gimt-sidebar .nav-link { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 8px 12px; color: var(--sidebar-text); font-size: .85rem; font-weight: 600; border-radius: 8px; text-decoration: none; }
+    .gimt-sidebar .nav-link:hover { color: var(--gimt-primary); background: var(--gimt-blue-light); }
+    .gimt-sidebar .nav-link.active { color: #fff; background: var(--gimt-primary); }
+    .sub-menu { margin: 4px 0 8px 13px; padding-left: 10px; border-left: 1px solid var(--sidebar-border); }
+    .gimt-sidebar .sub-menu .nav-link { min-height: 35px; padding: 6px 10px; color: #64748b; font-size: .81rem; font-weight: 500; }
+    .gimt-sidebar .sub-menu .nav-link.active, .gimt-sidebar .sub-menu .nav-link:hover { color: var(--gimt-primary); background: var(--gimt-blue-light); }
+    .sidebar-footer { flex: 0 0 auto; padding: 14px; background: #f8fafc; border-top: 1px solid var(--sidebar-border); }
+    .sidebar-toggle { position: fixed; top: 14px; left: 14px; z-index: 1040; width: 44px; height: 44px; display: grid; place-items: center; padding: 0; color: #fff; background: var(--gimt-primary); border: 0; border-radius: 9px; }
+    @media (min-width: 992px) { .gimt-sidebar { position: sticky !important; top: 0 !important; align-self: flex-start; } .sidebar-toggle { display: none !important; } }
+    @media (max-width: 991.98px) { .gimt-sidebar { width: 280px; min-width: 0; max-width: 85vw; } }
 </style>
 
-<!-- Mobile sidebar toggle -->
-<button class="btn sidebar-toggle d-lg-none" type="button"
-    data-bs-toggle="offcanvas" data-bs-target="#gimtSidebar"
-    aria-controls="gimtSidebar" aria-label="Open navigation">
+<button class="btn sidebar-toggle d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#principalSidebar" aria-controls="principalSidebar" aria-label="Open navigation">
     <i class="bi bi-list fs-3"></i>
 </button>
 
-<!-- GIMT ERP Principal Sidebar -->
-<aside class="offcanvas-lg offcanvas-start gimt-sidebar" tabindex="-1" id="gimtSidebar"
-    aria-label="GIMT ERP navigation">
-
+<aside class="offcanvas-lg offcanvas-start gimt-sidebar" tabindex="-1" id="principalSidebar" aria-label="Principal Navigation">
     <div class="sidebar-header d-flex align-items-center justify-content-between p-3">
-        <a href="<?= sb_e($base . 'principal_dashboard.php') ?>" class="d-flex align-items-center gap-2 text-decoration-none">
-            <img src="/public/images/logo.jpg" alt="GIMT Logo" class="brand-logo">
+        <a href="principal_dashboard.php" class="d-flex align-items-center gap-2 text-decoration-none">
             <div>
                 <span class="brand-title d-block">GIMT ERP</span>
-                <span class="brand-subtitle">PRINCIPAL PORTAL</span>
+                <span class="brand-subtitle">PRINCIPAL'S EXECUTIVE SUITE</span>
             </div>
         </a>
-
-        <button type="button" class="btn-close d-lg-none" data-bs-dismiss="offcanvas"
-            data-bs-target="#gimtSidebar" aria-label="Close navigation"></button>
+        <button type="button" class="btn-close d-lg-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
 
-    <nav class="sidebar-body" aria-label="Main navigation">
-        <?php
-        $listOpen = false;
-
-        foreach ($menu as $item):
-
-            if ($item['type'] === 'section'):
-                if ($listOpen) { echo '</ul>'; $listOpen = false; } ?>
-                <div class="menu-label"><?= sb_e($item['label']) ?></div>
-            <?php
-                continue;
-            endif;
-
-            if (!$listOpen) { echo '<ul class="nav flex-column mb-3">'; $listOpen = true; }
-
-            if ($item['type'] === 'link'):
-                $active = sb_active($item['href'], $currentPage); ?>
-                <li class="nav-item">
-                    <a class="nav-link<?= $active ? ' active' : '' ?>"
-                        href="<?= sb_e($base . $item['href']) ?>"
-                        <?= $active ? 'aria-current="page"' : '' ?>>
-                        <i class="bi <?= sb_e($item['icon']) ?>"></i>
-                        <span><?= sb_e($item['label']) ?></span>
-                    </a>
-                </li>
-            <?php
-            elseif ($item['type'] === 'group'):
-                $groupActive = false;
-                foreach ($item['items'] as $child) {
-                    if (sb_active($child['href'], $currentPage)) { $groupActive = true; break; }
-                } ?>
-                <li class="nav-item">
-                    <a class="nav-link<?= $groupActive ? ' active' : '' ?>"
-                        data-bs-toggle="collapse" href="#<?= sb_e($item['id']) ?>" role="button"
-                        aria-expanded="<?= $groupActive ? 'true' : 'false' ?>"
-                        aria-controls="<?= sb_e($item['id']) ?>">
-                        <i class="bi <?= sb_e($item['icon']) ?>"></i>
-                        <span><?= sb_e($item['label']) ?></span>
-                        <i class="bi bi-chevron-down menu-arrow"></i>
-                    </a>
-
-                    <div class="collapse<?= $groupActive ? ' show' : '' ?>" id="<?= sb_e($item['id']) ?>">
-                        <ul class="nav flex-column sub-menu">
-                            <?php foreach ($item['items'] as $child):
-                                $childActive = sb_active($child['href'], $currentPage); ?>
-                                <li class="nav-item">
-                                    <a class="nav-link<?= $childActive ? ' active' : '' ?>"
-                                        href="<?= sb_e($base . $child['href']) ?>"
-                                        <?= $childActive ? 'aria-current="page"' : '' ?>>
-                                        <?= sb_e($child['label']) ?>
-                                    </a>
-                                </li>
-                            <?php endforeach; ?>
-                        </ul>
-                    </div>
-                </li>
-        <?php
-            endif;
-        endforeach;
-
-        if ($listOpen) echo '</ul>';
-        ?>
+    <nav class="sidebar-body" aria-label="Principal Menu">
+        <?php foreach ($menu as $entry): ?>
+            <?php if ($entry['type'] === 'section'): ?>
+                <div class="menu-label mt-2"><?= sb_e($entry['label']) ?></div>
+            <?php elseif ($entry['type'] === 'link'): ?>
+                <?php $isActive = sb_active($entry['href'], $currentPage); ?>
+                <ul class="nav flex-column mb-1">
+                    <li class="nav-item">
+                        <a class="nav-link<?= $isActive ? ' active' : '' ?>" href="<?= sb_e($entry['href']) ?>">
+                            <i class="bi <?= sb_e($entry['icon']) ?>"></i>
+                            <span><?= sb_e($entry['label']) ?></span>
+                        </a>
+                    </li>
+                </ul>
+            <?php elseif ($entry['type'] === 'group'): ?>
+                <?php
+                $anyActive = false;
+                foreach ($entry['items'] as $it) {
+                    if (sb_active($it['href'], $currentPage)) {
+                        $anyActive = true;
+                        break;
+                    }
+                }
+                ?>
+                <ul class="nav flex-column mb-1">
+                    <li class="nav-item">
+                        <a class="nav-link<?= $anyActive ? ' active' : '' ?>" data-bs-toggle="collapse" href="#<?= sb_e($entry['id']) ?>" role="button" aria-expanded="<?= $anyActive ? 'true' : 'false' ?>">
+                            <i class="bi <?= sb_e($entry['icon']) ?>"></i>
+                            <span><?= sb_e($entry['label']) ?></span>
+                            <i class="bi bi-chevron-down ms-auto" style="font-size: .75rem;"></i>
+                        </a>
+                        <div class="collapse<?= $anyActive ? ' show' : '' ?>" id="<?= sb_e($entry['id']) ?>">
+                            <ul class="nav flex-column sub-menu">
+                                <?php foreach ($entry['items'] as $it): ?>
+                                    <?php $itActive = sb_active($it['href'], $currentPage); ?>
+                                    <li class="nav-item">
+                                        <a class="nav-link<?= $itActive ? ' active' : '' ?>" href="<?= sb_e($it['href']) ?>">
+                                            <?= sb_e($it['label']) ?>
+                                        </a>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </div>
+                    </li>
+                </ul>
+            <?php endif; ?>
+        <?php endforeach; ?>
     </nav>
 
     <footer class="sidebar-footer">
         <div class="d-flex align-items-center gap-2">
-            <div class="admin-avatar"><?= sb_e($user_initial) ?></div>
-
-            <div class="flex-grow-1 overflow-hidden">
-                <span class="admin-name d-block text-truncate"><?= sb_e($user_name) ?></span>
-                <span class="admin-email d-block text-truncate"><?= sb_e($user_email) ?></span>
+            <div class="bg-primary text-white rounded-circle p-2 fw-bold text-center" style="width: 36px; height: 36px; line-height: 20px;">
+                <?= sb_e($user_initial) ?>
             </div>
-
-            <a href="/public/logout.php" class="logout-btn" title="Logout" aria-label="Logout">
+            <div class="flex-grow-1 overflow-hidden">
+                <span class="d-block text-truncate fw-bold small text-dark"><?= sb_e($user_name) ?></span>
+                <span class="d-block text-truncate text-muted" style="font-size: 0.72rem;"><?= sb_e($user_email) ?></span>
+            </div>
+            <a href="logout.php" class="text-danger p-2 text-decoration-none" title="Sign out">
                 <i class="bi bi-box-arrow-right fs-5"></i>
             </a>
         </div>
     </footer>
 </aside>
-
-<script>
-    // Close the mobile sidebar after clicking a normal link
-    document.addEventListener('DOMContentLoaded', function () {
-        const sidebar = document.getElementById('gimtSidebar');
-        if (!sidebar) return;
-
-        sidebar.querySelectorAll('.nav-link:not([data-bs-toggle="collapse"])').forEach(link => {
-            link.addEventListener('click', () => {
-                if (window.innerWidth < 992 && window.bootstrap) {
-                    const instance = bootstrap.Offcanvas.getInstance(sidebar);
-                    if (instance) instance.hide();
-                }
-            });
-        });
-    });
-</script>

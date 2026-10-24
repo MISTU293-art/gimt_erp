@@ -1,607 +1,256 @@
 <?php
-include('./config/db.config.php');
+require_once __DIR__ . '/config/db.config.php';
 require_once __DIR__ . '/middleware/isLoggedIn.php';
-// require_once __DIR__ . '/middleware/chairmanOnly.php';
+require_once __DIR__ . '/middleware/principalOnly.php';
 
-$user_name = $_SESSION['user_name'];
-$user_role = $_SESSION['user_role'];
-// total users
-$totalUser = $conn->prepare("SELECT COUNT(*) AS total FROM users");
-$totalUser->execute();
+$pdo = getDb();
+$user_name = $_SESSION['user_name'] ?? 'Principal';
+$user_role = $_SESSION['user_role'] ?? 'principal';
 
-$result = $totalUser->get_result();
-$row = $result->fetch_assoc();
+// Principal Key Metrics
+$totalStudents = (int)$pdo->query("SELECT COUNT(*) FROM students WHERE admission_status = 'admitted'")->fetchColumn();
+$pendingAdmissions = (int)$pdo->query("SELECT COUNT(*) FROM admissions WHERE status IN ('submitted', 'under_review')")->fetchColumn();
 
-$totalUsers = (int) $row['total'];
+// Defaulters (< 75%)
+$attDefaulters = (int)$pdo->query("
+    SELECT COUNT(DISTINCT s.id)
+    FROM students s
+    JOIN attendance a ON s.id = a.student_id
+    GROUP BY s.id
+    HAVING (SUM(CASE WHEN a.status IN ('present', 'late', 'on_duty') THEN 1 ELSE 0 END) / COUNT(a.id)) < 0.75
+")->rowCount();
+
+// Fee Defaulters
+$feeDefaulters = (int)$pdo->query("
+    SELECT COUNT(DISTINCT s.id)
+    FROM students s
+    JOIN student_ledger sl ON s.id = sl.student_id
+    GROUP BY s.id
+    HAVING (SUM(CASE WHEN sl.type = 'debit' THEN sl.amount ELSE 0 END) - SUM(CASE WHEN sl.type IN ('credit', 'waiver') THEN sl.amount ELSE 0 END)) > 0
+")->rowCount();
+
+$activeOverrides = (int)$pdo->query("SELECT COUNT(*) FROM hall_ticket_overrides")->fetchColumn();
+$totalCourses = (int)$pdo->query("SELECT COUNT(*) FROM courses")->fetchColumn();
+$totalFaculty = (int)$pdo->query("SELECT COUNT(*) FROM users WHERE role IN ('teacher', 'hod')")->fetchColumn();
+
+// Recent pending leave requests needing principal/faculty endorsement
+$pendingLeaves = $pdo->query("
+    SELECT lr.*, s.roll_no, u.name AS student_name, d.dept_code
+    FROM leave_requests lr
+    JOIN students s ON lr.student_id = s.id
+    JOIN users u ON s.user_id = u.id
+    JOIN departments d ON s.department_id = d.id
+    WHERE lr.status = 'pending'
+    ORDER BY lr.created_at DESC LIMIT 5
+")->fetchAll();
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>GIMT ERP | Dashboard</title>
+    <title>GIMT ERP &bull; Principal Executive Suite</title>
     <link rel="icon" type="image/jpeg" href="/public/images/logo.jpg">
-    <link rel="apple-touch-icon" href="/php/images/images.jpg">
-    <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-        rel="stylesheet">
-
-    <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
-        rel="stylesheet">
-
-
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <style>
         :root {
             --gimt-primary: #123b70;
-            --gimt-primary-dark: #09264b;
-            --gimt-blue: #2563eb;
-            --gimt-blue-light: #eff6ff;
-
-            --sidebar-bg: #ffffff;
-            --sidebar-text: #475569;
-            --sidebar-muted: #94a3b8;
-            --sidebar-border: #e2e8f0;
-
+            --gimt-primary-dark: #0a1f3d;
             --page-bg: #f5f7fb;
-            --card-bg: #ffffff;
             --text-primary: #172b4d;
         }
-
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            margin: 0;
-            min-height: 100vh;
-            background: var(--page-bg);
-            color: var(--text-primary);
-            font-family: "Segoe UI", Tahoma, sans-serif;
-        }
-
-        /* Main layout */
-        .dashboard-layout {
-            display: flex;
-            min-height: 100vh;
-        }
-
-        .dashboard-main {
-            flex: 1;
-            min-width: 0;
-            padding: 30px;
-        }
-
-        /* Sidebar */
-        .gimt-sidebar {
-            width: 265px;
-            height: 100vh;
-            flex-shrink: 0;
-            display: flex;
-            flex-direction: column;
-            color: var(--sidebar-text);
-            background: var(--sidebar-bg);
-            border-right: 1px solid var(--sidebar-border);
-            z-index: 1045;
-        }
-
-        .sidebar-header {
-            min-height: 78px;
-            border-bottom: 1px solid var(--sidebar-border);
-        }
-
-        .brand-logo {
-            width: 42px;
-            height: 42px;
-            padding: 3px;
-            object-fit: contain;
-            border: 1px solid var(--sidebar-border);
-            border-radius: 9px;
-        }
-
-        .brand-title {
-            color: var(--gimt-primary-dark);
-            font-size: 1.05rem;
-            font-weight: 800;
-        }
-
-        .brand-subtitle {
-            display: block;
-            margin-top: 4px;
-            color: var(--gimt-blue);
-            font-size: 0.59rem;
-            font-weight: 800;
-            letter-spacing: 0.65px;
-        }
-
-        /* Scrollable navigation */
-        .sidebar-body {
-            flex: 1;
-            min-height: 0;
-            overflow-y: auto;
-            overflow-x: hidden;
-            padding: 18px 12px;
-            scrollbar-width: thin;
-            scrollbar-color: #cbd5e1 #ffffff;
-        }
-
-        .menu-label {
-            margin: 12px 10px 8px;
-            color: var(--sidebar-muted);
-            font-size: 0.67rem;
-            font-weight: 800;
-            letter-spacing: 1px;
-        }
-
-        .gimt-sidebar .nav {
-            gap: 3px;
-        }
-
-        .gimt-sidebar .nav-link {
-            min-height: 42px;
-            display: flex;
-            align-items: center;
-            gap: 11px;
-            padding: 10px 12px;
-            border-radius: 7px;
-            color: var(--sidebar-text);
-            font-size: 0.86rem;
-            font-weight: 600;
-            text-decoration: none;
-            transition: 0.2s ease;
-        }
-
-        .gimt-sidebar .nav-link>i:first-child {
-            width: 19px;
-            flex-shrink: 0;
-            color: #64748b;
-            font-size: 1.05rem;
-            text-align: center;
-        }
-
-        .gimt-sidebar .nav-link:hover {
-            color: var(--gimt-primary);
-            background: var(--gimt-blue-light);
-        }
-
-        .gimt-sidebar .nav-link:hover>i:first-child {
-            color: var(--gimt-blue);
-        }
-
-        .gimt-sidebar .nav-link.active {
-            color: #ffffff;
-            background: var(--gimt-primary);
-        }
-
-        .gimt-sidebar .nav-link.active>i:first-child {
-            color: #ffffff;
-        }
-
-        .menu-arrow {
-            margin-left: auto;
-            font-size: 0.75rem !important;
-            transition: transform 0.2s ease;
-        }
-
-        .gimt-sidebar .nav-link[aria-expanded="true"] .menu-arrow {
-            transform: rotate(180deg);
-        }
-
-        /* Submenus */
-        .sub-menu {
-            margin: 4px 0 8px 13px;
-            padding-left: 10px;
-            border-left: 1px solid var(--sidebar-border);
-        }
-
-        .gimt-sidebar .sub-menu .nav-link {
-            min-height: 36px;
-            padding: 8px 10px;
-            color: #64748b;
-            font-size: 0.81rem;
-            font-weight: 500;
-        }
-
-        .gimt-sidebar .sub-menu .nav-link:hover,
-        .gimt-sidebar .sub-menu .nav-link.active {
-            color: var(--gimt-blue);
-            background: var(--gimt-blue-light);
-        }
-
-        /* Sidebar footer */
-        .sidebar-footer {
-            flex-shrink: 0;
-            background: #ffffff;
-            border-top: 1px solid var(--sidebar-border);
-        }
-
-        .admin-avatar {
-            width: 40px;
-            height: 40px;
-            flex-shrink: 0;
-            display: grid;
-            place-items: center;
-            border-radius: 50%;
-            color: #ffffff;
-            background: var(--gimt-primary);
-            font-size: 0.85rem;
-            font-weight: 800;
-        }
-
-        .admin-name {
-            color: var(--text-primary);
-            font-size: 0.82rem;
-            font-weight: 700;
-        }
-
-        .admin-email {
-            color: #64748b;
-            font-size: 0.70rem;
-        }
-
-        .logout-btn {
-            width: 36px;
-            height: 36px;
-            display: grid;
-            place-items: center;
-            flex-shrink: 0;
-            color: #64748b;
-            border-radius: 8px;
-            text-decoration: none;
-        }
-
-        .logout-btn:hover {
-            color: #dc2626;
-            background: #fef2f2;
-        }
-
-        /* Mobile toggle */
-        .sidebar-toggle {
-            position: fixed;
-            top: 14px;
-            left: 14px;
-            z-index: 1040;
-            width: 44px;
-            height: 44px;
-            display: grid;
-            place-items: center;
-            padding: 0;
-            color: #ffffff;
-            background: var(--gimt-primary);
-            border: none;
-            border-radius: 9px;
-            box-shadow: 0 4px 12px rgb(15 23 42 / 12%);
-        }
-
-        .sidebar-toggle:hover {
-            color: #ffffff;
-            background: var(--gimt-blue);
-        }
-
-        /* Dashboard content components */
-        .page-title {
-            color: var(--text-primary);
-            font-size: 1.65rem;
-            font-weight: 750;
-        }
-
-        .page-subtitle {
-            color: #64748b;
-            font-size: 0.9rem;
-        }
-
-        .dashboard-card {
-            height: 100%;
-            padding: 22px;
-            background: var(--card-bg);
-            border: 1px solid #e8edf4;
-            border-radius: 12px;
-            box-shadow: 0 3px 12px rgb(15 23 42 / 3%);
-        }
-
-        .dashboard-card-icon {
-            width: 46px;
-            height: 46px;
-            display: grid;
-            place-items: center;
-            border-radius: 11px;
-            color: var(--gimt-primary);
-            background: var(--gimt-blue-light);
-            font-size: 1.3rem;
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 7px 12px;
-            border-radius: 20px;
-            color: var(--gimt-primary);
-            background: var(--gimt-blue-light);
-            font-size: 0.75rem;
-            font-weight: 700;
-        }
-
-        .dashboard-header {
-            border-color: #e5e7eb !important;
-        }
-
-        .header-icon {
-            width: 54px;
-            height: 54px;
-            flex-shrink: 0;
-            background: #eaf1ff;
-            color: #1746a2;
-        }
-
-        .page-title {
-            font-size: clamp(1.4rem, 3vw, 1.8rem);
-            color: #172554;
-            letter-spacing: -0.5px;
-        }
-
-        .page-subtitle {
-            font-size: 0.95rem;
-        }
-
-        .status-badge {
-            background: #eaf7ef;
-            color: #166534;
-            border: 1px solid #bbf7d0;
-            font-size: 0.85rem;
-            font-weight: 600;
-            white-space: nowrap;
-        }
-
-        .dashboard-header .btn {
-            font-weight: 600;
-            font-size: 0.9rem;
-            transition: all 0.2s ease;
-        }
-
-        .dashboard-header .btn:hover {
-            transform: translateY(-1px);
-        }
-
-        @media (max-width: 576px) {
-            .dashboard-header {
-                align-items: flex-start !important;
-            }
-
-            .dashboard-header>div:last-child {
-                width: 100%;
-            }
-
-            .dashboard-header .btn {
-                flex: 1;
-                justify-content: center;
-            }
-        }
-
-
-        /* Desktop */
-        @media (min-width: 992px) {
-            .gimt-sidebar {
-                position: sticky;
-                top: 0;
-            }
-
-            .sidebar-toggle {
-                display: none !important;
-            }
-        }
-
-        /* Mobile and tablet */
-        @media (max-width: 991.98px) {
-            .gimt-sidebar {
-                width: 280px;
-                max-width: 85vw;
-                height: 100vh;
-                min-height: 0;
-            }
-
-            .dashboard-main {
-                width: 100%;
-                padding: 76px 16px 24px;
-            }
-
-            .page-title {
-                font-size: 1.4rem;
-            }
-        }
+        body { margin: 0; min-height: 100vh; background: var(--page-bg); color: var(--text-primary); font-family: "Segoe UI", Tahoma, sans-serif; }
+        .dashboard-layout { display: flex; min-height: 100vh; }
+        .dashboard-main { flex: 1; min-width: 0; padding: 28px; }
+        .dashboard-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 22px; box-shadow: 0 4px 16px rgba(15,23,42,0.04); height: 100%; }
+        .metric-value { font-size: 1.8rem; font-weight: 750; color: #123b70; line-height: 1.1; }
+        .quick-tile { background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 18px; text-decoration: none; color: inherit; display: block; transition: all 0.2s; }
+        .quick-tile:hover { transform: translateY(-2px); box-shadow: 0 8px 16px rgba(0,0,0,0.06); border-color: var(--gimt-primary); color: var(--gimt-primary); }
     </style>
 </head>
-
 <body>
-
     <div class="dashboard-layout">
-
-        <!-- Sidebar component goes here -->
         <?php include('./partials/principal_sidebar.php') ?>
+
         <main class="dashboard-main">
-
-            <!-- Page header -->
-
-            <header class="dashboard-header d-flex align-items-center justify-content-between flex-wrap gap-3 p-3 p-md-4 mb-4 rounded-4 border bg-white shadow-sm">
-
-                <!-- Left: Dashboard information -->
-                <div class="d-flex align-items-center gap-3">
-                    <div class="header-icon d-flex align-items-center justify-content-center rounded-3">
-                        <i class="bi bi-grid-1x2-fill fs-4"></i>
-                    </div>
-
-                    <div>
-                        <h1 class="page-title fw-bold mb-1">Dashboard</h1>
-
-                        <p class="page-subtitle text-secondary mb-2">
-                            Welcome, <strong class="text-dark"><?php echo htmlspecialchars($user_name, ENT_QUOTES, 'UTF-8'); ?></strong>
-                            to GIMT ERP Administration.
-                        </p>
-
-                        <span class="text-secondary small">
-                            <i class="bi bi-calendar3 me-1"></i>
-                            <?php echo date('l, d M Y'); ?>
-                        </span>
-                    </div>
+            <!-- Header -->
+            <header class="d-flex align-items-center justify-content-between flex-wrap gap-3 p-4 mb-4 rounded-4 border bg-white shadow-sm">
+                <div>
+                    <span class="badge text-bg-warning px-3 py-1 rounded-pill mb-1">OFFICE OF THE PRINCIPAL</span>
+                    <h1 class="h3 fw-bold mb-1">Academic Governance &amp; Executive Oversight</h1>
+                    <p class="text-secondary mb-0">Welcome, <strong><?= htmlspecialchars($user_name, ENT_QUOTES, 'UTF-8') ?></strong> &bull; <?= date('l, d F Y') ?></p>
                 </div>
-
-                <!-- Right: Role and logout -->
-                <div class="d-flex align-items-center flex-wrap gap-2">
-
-                    <span class="status-badge d-inline-flex align-items-center gap-2 px-3 py-2 rounded-pill">
-                        <i class="bi bi-shield-check"></i>
-                        <?php echo htmlspecialchars($user_role, ENT_QUOTES, 'UTF-8'); ?>
-                    </span>
-
-                    <a href="logout.php"
-                        class="btn btn-outline-danger d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3"
-                        onclick="return confirm('Are you sure you want to log out?');">
-                        <i class="bi bi-box-arrow-right"></i>
-                        <span>Logout</span>
+                <div class="d-flex align-items-center gap-2">
+                    <a href="hall_tickets.php" class="btn btn-warning fw-bold">
+                        <i class="bi bi-shield-check me-1"></i> Principal Override Desk
                     </a>
-
+                    <a href="logout.php" class="btn btn-outline-danger" onclick="return confirm('Log out?');">
+                        <i class="bi bi-box-arrow-right me-1"></i> Logout
+                    </a>
                 </div>
-
             </header>
 
+            <!-- Metrics Grid -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-3 col-sm-6">
+                    <div class="dashboard-card">
+                        <div class="text-secondary small fw-bold text-uppercase">Total Enrolled Students</div>
+                        <div class="metric-value text-primary"><?= $totalStudents ?></div>
+                        <div class="small text-muted mt-2">Active college enrolments</div>
+                        <a href="student_ledger.php" class="small text-decoration-none mt-1 d-block">Student Registry &rarr;</a>
+                    </div>
+                </div>
 
+                <div class="col-md-3 col-sm-6">
+                    <div class="dashboard-card">
+                        <div class="text-secondary small fw-bold text-uppercase">Admissions Under Review</div>
+                        <div class="metric-value text-warning"><?= $pendingAdmissions ?></div>
+                        <div class="small text-muted mt-2">Pending principal endorsement</div>
+                        <a href="admissions_manage.php" class="small text-decoration-none mt-1 d-block">Review Pipeline &rarr;</a>
+                    </div>
+                </div>
 
+                <div class="col-md-3 col-sm-6">
+                    <div class="dashboard-card">
+                        <div class="text-secondary small fw-bold text-uppercase">Attendance &lt; 75% Defaulters</div>
+                        <div class="metric-value text-danger"><?= $attDefaulters ?></div>
+                        <div class="small text-muted mt-2">Exam admit card blocked</div>
+                        <a href="attendance_analytics.php?defaulters_only=1" class="small text-decoration-none mt-1 d-block">Defaulters List &rarr;</a>
+                    </div>
+                </div>
 
-            <!-- Dashboard statistics -->
-            <section class="row g-3 mb-4">
+                <div class="col-md-3 col-sm-6">
+                    <div class="dashboard-card">
+                        <div class="text-secondary small fw-bold text-uppercase">Active Condonation Overrides</div>
+                        <div class="metric-value text-success"><?= $activeOverrides ?></div>
+                        <div class="small text-muted mt-2">Authorized special waivers</div>
+                        <a href="hall_tickets.php" class="small text-decoration-none mt-1 d-block">Manage Overrides &rarr;</a>
+                    </div>
+                </div>
+            </div>
 
-                <div class="col-12 col-sm-6 col-xl-3">
-                    <article class="dashboard-card">
-                        <div class="d-flex align-items-center justify-content-between mb-3">
-                            <div class="dashboard-card-icon">
-                                <i class="bi bi-people"></i>
+            <!-- Principal Operations Modules -->
+            <h2 class="h5 fw-bold mb-3">Academic Leadership Workbenches</h2>
+            <div class="row g-3 mb-4">
+                <div class="col-md-4 col-sm-6">
+                    <a href="admissions_manage.php" class="quick-tile">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="bg-primary-subtle text-primary p-3 rounded-circle fs-4"><i class="bi bi-person-check-fill"></i></div>
+                            <div>
+                                <div class="fw-bold">Admissions Approval</div>
+                                <div class="small text-muted">Document audit &amp; automated roll generation</div>
                             </div>
-                            <span class="text-secondary small">Users</span>
                         </div>
-
-                        <h2 class="h3 fw-bold mb-1"><?= $totalUsers ?></h2>
-                        <p class="text-secondary small mb-0">Registered users</p>
-                    </article>
+                    </a>
                 </div>
-
-                <div class="col-12 col-sm-6 col-xl-3">
-                    <article class="dashboard-card">
-                        <div class="d-flex align-items-center justify-content-between mb-3">
-                            <div class="dashboard-card-icon">
-                                <i class="bi bi-mortarboard"></i>
+                <div class="col-md-4 col-sm-6">
+                    <a href="hall_tickets.php" class="quick-tile">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="bg-warning-subtle text-warning p-3 rounded-circle fs-4"><i class="bi bi-person-badge-fill"></i></div>
+                            <div>
+                                <div class="fw-bold">Exam Hall Tickets &amp; Override</div>
+                                <div class="small text-muted">Attendance condonation &amp; hall ticket authorization</div>
                             </div>
-                            <span class="text-secondary small">Academic</span>
                         </div>
-
-                        <h2 class="h3 fw-bold mb-1">0.0</h2>
-                        <p class="text-secondary small mb-0">Courses and departments</p>
-                    </article>
+                    </a>
                 </div>
-
-                <div class="col-12 col-sm-6 col-xl-3">
-                    <article class="dashboard-card">
-                        <div class="d-flex align-items-center justify-content-between mb-3">
-                            <div class="dashboard-card-icon">
-                                <i class="bi bi-person-workspace"></i>
+                <div class="col-md-4 col-sm-6">
+                    <a href="exam_tabulation.php" class="quick-tile">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="bg-success-subtle text-success p-3 rounded-circle fs-4"><i class="bi bi-award-fill"></i></div>
+                            <div>
+                                <div class="fw-bold">Consolidated Tabulation</div>
+                                <div class="small text-muted">Regulatory continuous internal evaluations</div>
                             </div>
-                            <span class="text-secondary small">Faculty</span>
                         </div>
-
-                        <h2 class="h3 fw-bold mb-1">0.0</h2>
-                        <p class="text-secondary small mb-0">Faculty and staff</p>
-                    </article>
+                    </a>
                 </div>
-
-                <div class="col-12 col-sm-6 col-xl-3">
-                    <article class="dashboard-card">
-                        <div class="d-flex align-items-center justify-content-between mb-3">
-                            <div class="dashboard-card-icon">
-                                <i class="bi bi-wallet2"></i>
+                <div class="col-md-4 col-sm-6">
+                    <a href="faculty_workload.php" class="quick-tile">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="bg-info-subtle text-info p-3 rounded-circle fs-4"><i class="bi bi-person-workspace"></i></div>
+                            <div>
+                                <div class="fw-bold">Faculty Workload Allocation</div>
+                                <div class="small text-muted">Teaching assignments &amp; credit distribution</div>
                             </div>
-                            <span class="text-secondary small">Finance</span>
                         </div>
-
-                        <h2 class="h3 fw-bold mb-1">0.0</h2>
-                        <p class="text-secondary small mb-0">Fee collections</p>
-                    </article>
+                    </a>
                 </div>
-
-            </section>
-
-            <!-- Main content section -->
-            <section class="dashboard-card">
-
-                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
-                    <h2 class="h5 fw-bold mb-0">System Overview</h2>
-
-                    <span class="text-secondary small">
-                        <i class="bi bi-info-circle me-1"></i>
-                        Connect your database to load live data
-                    </span>
+                <div class="col-md-4 col-sm-6">
+                    <a href="courses_master.php" class="quick-tile">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="bg-secondary-subtle text-secondary p-3 rounded-circle fs-4"><i class="bi bi-journal-bookmark-fill"></i></div>
+                            <div>
+                                <div class="fw-bold">Course &amp; Credit Master</div>
+                                <div class="small text-muted">Department curriculum &amp; credit catalogs</div>
+                            </div>
+                        </div>
+                    </a>
                 </div>
+                <div class="col-md-4 col-sm-6">
+                    <a href="fee_defaulters.php" class="quick-tile">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="bg-danger-subtle text-danger p-3 rounded-circle fs-4"><i class="bi bi-exclamation-octagon-fill"></i></div>
+                            <div>
+                                <div class="fw-bold">Fee Defaulter Oversight</div>
+                                <div class="small text-muted">Review institutional outstanding dues</div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </div>
 
-                <p class="text-secondary mb-0">
-                    Welcome to the GIMT ERP administration workspace.
-                    Select a module from the sidebar to manage academic
-                    records, students, faculty, examinations, and finance.
-                </p>
-
-            </section>
+            <!-- Pending Condonations & Leaves -->
+            <div class="dashboard-card mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="h5 fw-bold mb-0">Pending Student Absence &amp; Condonation Requests</h2>
+                    <a href="leave_requests.php" class="btn btn-sm btn-outline-primary">Review All</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Roll Number &bull; Student Name</th>
+                                <th>Discipline</th>
+                                <th>Classification</th>
+                                <th>Duration</th>
+                                <th>Reason</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (empty($pendingLeaves)): ?>
+                                <tr>
+                                    <td colspan="6" class="text-center py-4 text-muted">No pending absence or condonation requests awaiting endorsement.</td>
+                                </tr>
+                            <?php else: ?>
+                                <?php foreach ($pendingLeaves as $pl): ?>
+                                    <tr>
+                                        <td>
+                                            <span class="badge bg-dark-subtle text-dark border font-monospace"><?= htmlspecialchars($pl['roll_no']) ?></span>
+                                            <div class="fw-bold mt-1"><?= htmlspecialchars($pl['student_name']) ?></div>
+                                        </td>
+                                        <td><span class="badge bg-secondary"><?= htmlspecialchars($pl['dept_code']) ?></span></td>
+                                        <td><span class="badge bg-primary-subtle text-primary border border-primary-subtle"><?= htmlspecialchars($pl['leave_type']) ?></span></td>
+                                        <td class="small">
+                                            <?= date('d M', strtotime($pl['start_date'])) ?> to <?= date('d M Y', strtotime($pl['end_date'])) ?>
+                                        </td>
+                                        <td class="small text-truncate" style="max-width: 250px;"><?= htmlspecialchars($pl['reason']) ?></td>
+                                        <td class="text-end">
+                                            <a href="leave_requests.php" class="btn btn-sm btn-primary">Endorse</a>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
         </main>
-
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
-    <script>
-        // Update this active link on each page.
-        // Dashboard is active on dashboard.html.
-        document.querySelectorAll("#gimtSidebar .nav-link").forEach(link => {
-            if (link.getAttribute("href") === window.location.pathname.split("/").pop()) {
-                document.querySelectorAll("#gimtSidebar .nav-link").forEach(item => {
-                    item.classList.remove("active");
-                    item.removeAttribute("aria-current");
-                });
-
-                link.classList.add("active");
-                link.setAttribute("aria-current", "page");
-
-                const parentMenu = link.closest(".collapse");
-
-                if (parentMenu) {
-                    parentMenu.classList.add("show");
-
-                    const toggle = document.querySelector(
-                        '[href="#' + parentMenu.id + '"]'
-                    );
-
-                    if (toggle) {
-                        toggle.classList.add("active");
-                        toggle.setAttribute("aria-expanded", "true");
-                    }
-                }
-            }
-        });
-
-        // Close mobile sidebar after clicking a normal navigation link.
-        document.querySelectorAll(
-            "#gimtSidebar .nav-link:not([data-bs-toggle='collapse'])"
-        ).forEach(link => {
-            link.addEventListener("click", () => {
-                if (window.innerWidth < 992) {
-                    const sidebar = document.getElementById("gimtSidebar");
-                    const instance = bootstrap.Offcanvas.getInstance(sidebar);
-
-                    if (instance) {
-                        instance.hide();
-                    }
-                }
-            });
-        });
-    </script>
-
 </body>
-
 </html>

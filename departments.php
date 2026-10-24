@@ -1,5 +1,7 @@
 <?php
 require_once __DIR__ . '/middleware/isLoggedIn.php';
+require_once __DIR__ . '/middleware/roleAccess.php';
+require_user_role(['chairman', 'principal']);
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
@@ -294,7 +296,11 @@ if ($result) {
 
 <body>
     <div class="page-layout">
-        <?php include __DIR__ . '/partials/superAdmin_sidebar.php'; ?>
+        <?php if (($_SESSION['user_role'] ?? '') === 'principal'): ?>
+            <?php include __DIR__ . '/partials/principal_sidebar.php'; ?>
+        <?php else: ?>
+            <?php include __DIR__ . '/partials/superAdmin_sidebar.php'; ?>
+        <?php endif; ?>
 
         <main class="dashboard-main">
             <div class="container-fluid p-0">

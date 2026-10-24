@@ -52,13 +52,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($action === 'block') {
             $stmt = $conn->prepare(
-                "UPDATE users SET is_blocked = 1, blocked_at = NOW(), blocked_by = ? WHERE id = ? LIMIT 1"
+                "UPDATE users SET status = 'blocked' WHERE id = ? LIMIT 1"
             );
-            $stmt->bind_param('ss', $currentId, $id);
+            $stmt->bind_param('s', $id);
             $okMsg = 'User has been blocked.';
         } else {
             $stmt = $conn->prepare(
-                "UPDATE users SET is_blocked = 0, blocked_at = NULL, blocked_by = NULL WHERE id = ? LIMIT 1"
+                "UPDATE users SET status = 'active' WHERE id = ? LIMIT 1"
             );
             $stmt->bind_param('s', $id);
             $okMsg = 'User has been unblocked.';
@@ -181,7 +181,7 @@ if (!$data) {
     exit('Staff member not found.');
 }
 
-$isBlocked = (int) ($data['is_blocked'] ?? 0) === 1;
+$isBlocked = ($data['status'] ?? '') !== 'active';
 $isSelf    = ($currentId !== '' && $id === $currentId);
 ?>
 <!DOCTYPE html>
@@ -439,10 +439,7 @@ $isSelf    = ($currentId !== '' && $id === $currentId);
                 <?php if ($isBlocked): ?>
                     <div class="alert alert-danger blocked-banner">
                         <i class="bi bi-slash-circle me-1"></i>
-                        This user is blocked and cannot log in<?php
-                                                                if (!empty($data['blocked_at'])) {
-                                                                    echo ' (since ' . e(date('d M Y, h:i A', strtotime($data['blocked_at']))) . ')';
-                                                                } ?>.
+                        This user is blocked and cannot log in.
                     </div>
                 <?php endif; ?>
 
