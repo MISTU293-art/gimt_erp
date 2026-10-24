@@ -1,5 +1,9 @@
+
 {
     "name": "mistu/public",
+    "description": "College ERP system built with Core PHP and MySQL.",
+    "type": "project",
+    "license": "proprietary",
     "autoload": {
         "psr-4": {
             "Mistu\\Public\\": "src/"
